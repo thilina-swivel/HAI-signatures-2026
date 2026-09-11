@@ -202,31 +202,6 @@ function toast(message) {
   toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3200);
 }
 
-/* -------------------------------- tabs --------------------------------- */
-
-const tabs = [...document.querySelectorAll(".tab")];
-const panels = [...document.querySelectorAll(".steps")];
-
-function selectTab(name) {
-  tabs.forEach((tab) => tab.setAttribute("aria-selected", String(tab.dataset.tab === name)));
-  panels.forEach((panel) => (panel.hidden = panel.dataset.panel !== name));
-  try {
-    localStorage.setItem("sig-client", name);
-  } catch (err) {
-    /* private browsing - the default tab is fine */
-  }
-}
-
-tabs.forEach((tab) => tab.addEventListener("click", () => selectTab(tab.dataset.tab)));
-
-let savedTab = null;
-try {
-  savedTab = localStorage.getItem("sig-client");
-} catch (err) {
-  /* ignore */
-}
-selectTab(tabs.some((t) => t.dataset.tab === savedTab) ? savedTab : tabs[0].dataset.tab);
-
 /* ------------------------------- routing -------------------------------- */
 
 function route() {
