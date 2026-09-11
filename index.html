@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>humaniseAI Email Signatures</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <a class="brand" href="#/">
+      <img class="brand-logo" src="assets/logo-humaniseai.svg" alt="humaniseAI" width="125" height="30">
+      <span>Email Signatures</span>
+    </a>
+  </div>
+</header>
+
+<!-- ======================= LIST VIEW ======================= -->
+<main class="wrap view" id="view-list" hidden>
+  <h1 class="page-title">Find your name</h1>
+  <p class="page-sub">Select yourself from the list to get your signature and the steps to install it.</p>
+
+  <div class="search">
+    <svg class="search-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M9 2a7 7 0 105.3 11.6l3.6 3.6 1.4-1.4-3.6-3.6A7 7 0 009 2zm0 2a5 5 0 110 10A5 5 0 019 4z"/></svg>
+    <input id="search" type="search" placeholder="Search by name or job title" autocomplete="off" aria-label="Search employees">
+  </div>
+
+  <div id="people"></div>
+  <p class="empty" id="no-results" hidden>No one matches that search.</p>
+</main>
+
+<!-- ====================== DETAIL VIEW ====================== -->
+<main class="wrap view detail" id="view-detail" hidden>
+  <a class="back" href="#/">&#8592; All employees</a>
+
+  <div class="detail-head">
+    <img class="detail-photo" id="detail-photo" alt="" width="56" height="56">
+    <div>
+      <h1 class="detail-name" id="detail-name"></h1>
+      <p class="detail-title" id="detail-title"></p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Your signature</h2>
+      <div class="actions">
+        <button class="btn btn-primary" id="copy-btn">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 2h9a2 2 0 012 2v10h-2V4H7V2zM4 6h9a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zm0 2v8h9V8H4z"/></svg>
+          Copy signature
+        </button>
+        <button class="btn" id="download-btn">Download .html</button>
+      </div>
+    </div>
+
+    <!-- The signature lives in its own iframe: a bare document with none of this
+         page's CSS, so the clipboard fragment carries only the signature's own
+         inline styles. Copying out of a styled page makes Outlook and Gmail
+         override them, which is what broke the paste. -->
+    <div class="preview-frame">
+      <iframe class="sig-frame" id="sig-frame" title="Your email signature" scrolling="no"></iframe>
+    </div>
+
+    <p class="hint">Nothing pasted? Use <strong>Download .html</strong>, open the file in your browser, select everything with <kbd>Ctrl</kbd>/<kbd>&#8984;</kbd> + <kbd>A</kbd> and copy from there.</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head"><h2>How to install it</h2></div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" data-tab="outlook-new">New Outlook &amp; Outlook on the web</button>
+      <button class="tab" role="tab" data-tab="outlook-classic">Outlook (classic desktop)</button>
+      <button class="tab" role="tab" data-tab="gmail">Gmail</button>
+      <button class="tab" role="tab" data-tab="apple">Apple Mail</button>
+    </div>
+
+    <div class="tabpanels">
+      <ol class="steps" data-panel="outlook-new">
+        <li>Press <strong>Copy signature</strong> above.</li>
+        <li>In Outlook, open <strong>Settings</strong> (the gear icon) &#8594; <strong>Mail</strong> &#8594; <strong>Compose and reply</strong>.</li>
+        <li>Under <strong>Email signature</strong>, select <strong>+ New signature</strong> and name it <em>humaniseAI</em>.</li>
+        <li>Click inside the editing box and paste with <kbd>Ctrl</kbd>&#160;+&#160;<kbd>V</kbd> (<kbd>&#8984;</kbd>&#160;+&#160;<kbd>V</kbd> on Mac).</li>
+        <li>Set it as the default for <strong>new messages</strong> and <strong>replies/forwards</strong>, then <strong>Save</strong>.</li>
+      </ol>
+
+      <ol class="steps" data-panel="outlook-classic">
+        <li>Press <strong>Copy signature</strong> above.</li>
+        <li>In Outlook go to <strong>File</strong> &#8594; <strong>Options</strong> &#8594; <strong>Mail</strong> &#8594; <strong>Signatures&#8230;</strong></li>
+        <li>Click <strong>New</strong>, name it <em>humaniseAI</em>, and click <strong>OK</strong>.</li>
+        <li>Click into the <strong>Edit signature</strong> box and paste with <kbd>Ctrl</kbd>&#160;+&#160;<kbd>V</kbd>.</li>
+        <li>On the right, choose the signature for <strong>New messages</strong> and <strong>Replies/forwards</strong>.</li>
+        <li>Click <strong>OK</strong>. Open a new email to check it.</li>
+      </ol>
+
+      <ol class="steps" data-panel="gmail">
+        <li>Press <strong>Copy signature</strong> above.</li>
+        <li>In Gmail, open <strong>Settings</strong> (gear icon) &#8594; <strong>See all settings</strong>.</li>
+        <li>On the <strong>General</strong> tab, scroll to <strong>Signature</strong> and click <strong>+ Create new</strong>.</li>
+        <li>Name it <em>humaniseAI</em>, click into the box and paste with <kbd>Ctrl</kbd>&#160;+&#160;<kbd>V</kbd> (<kbd>&#8984;</kbd>&#160;+&#160;<kbd>V</kbd> on Mac).</li>
+        <li>Under <strong>Signature defaults</strong>, select it for new emails and for replies.</li>
+        <li>Scroll to the bottom and click <strong>Save Changes</strong>.</li>
+      </ol>
+
+      <ol class="steps" data-panel="apple">
+        <li>In Mail, go to <strong>Mail</strong> &#8594; <strong>Settings</strong> &#8594; <strong>Signatures</strong>.</li>
+        <li>Select your account, click <strong>+</strong>, and name it <em>humaniseAI</em>.</li>
+        <li>Untick <strong>Always match my default message font</strong>.</li>
+        <li>Come back here, press <strong>Copy signature</strong>, then paste into the signature box with <kbd>&#8984;</kbd>&#160;+&#160;<kbd>V</kbd>.</li>
+        <li>Pick the signature under <strong>Choose Signature</strong> for your account, then close Settings.</li>
+      </ol>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Load order matters: data first, then the template, then the page logic.
+     Plain scripts (not modules) so index.html also works when opened directly. -->
+<script src="js/assets.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/company.js"></script>
+<script src="js/employees.js"></script>
+<script src="js/signature.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
