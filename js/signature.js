@@ -45,7 +45,6 @@ const CONTENT = WIDTH - PHOTO_CELL - GUTTER;   // 333
 const BANNER_RATIO = [480, 70];
 const BANNER_H = Math.round((WIDTH * BANNER_RATIO[1]) / BANNER_RATIO[0]);
 
-const ICON_NUDGE = 3;     // (18px line - 12px icon) / 2, as cell padding
 const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
@@ -227,17 +226,20 @@ function buildSignature(employee, opts = {}) {
 
   /* ---- contact rows: one icon + one line, the way the v4 signature had it ---- */
 
-  // The icon is nudged down to sit on the text's optical centre: the text is
-  // 12px on an 18px line, so (18 - 12) / 2 = 3px. That nudge lives in the cell's
-  // padding, not as a margin on the image - the Word engine ignores margins on
-  // images, which left the icon riding high against the text in the Outlook
-  // Windows app. Padding on a <td> it does honour.
+  // Icon and text are middle-aligned against each other rather than both being
+  // pinned to the top with the icon nudged down by a magic number. Two earlier
+  // attempts at that nudge failed in the Outlook Windows app - first as a
+  // margin on the <img>, which the Word engine drops, then as padding on the
+  // cell - and either way the number is only correct while the font metrics
+  // are. valign="middle" needs no number: whatever height the row ends up,
+  // both cells centre in it. The attribute is there as well as the style
+  // because Outlook has always honoured the attribute.
   const row = ({ icon, uri, alt, w, h, body, href, last }) => `
                     <tr>
-                      <td width="12" valign="top" style="width:12px;padding:${ICON_NUDGE}px 0 ${last ? "0" : "5px"} 0;vertical-align:top;font-size:0;line-height:0;">
+                      <td width="12" valign="middle" style="width:12px;padding:0 0 ${last ? "0" : "5px"} 0;vertical-align:middle;font-size:0;line-height:0;">
                         <img src="${img(icon, uri)}" width="${w}" height="${h}" alt="${esc(alt)}" style="display:block;width:${w}px;height:${h}px;border:0;outline:none;">
                       </td>
-                      <td valign="top" style="vertical-align:top;padding:0 0 ${last ? "0" : "5px"} 7px;${text}line-height:18px;">
+                      <td valign="middle" style="vertical-align:middle;padding:0 0 ${last ? "0" : "5px"} 7px;${text}line-height:18px;">
                         ${href ? link(body, href) : body}
                       </td>
                     </tr>`;
