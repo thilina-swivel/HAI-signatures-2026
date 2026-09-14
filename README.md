@@ -177,8 +177,17 @@ risks the Word engine mishandling a zero-size font.
 The plain-text half of the clipboard is built from the raw field and stays free
 of all of it.
 
-`TAP_TO_CALL` at the top of `js/signature.js` restores the `tel:` link if a
-tappable number is ever worth more than the appearance.
+The number keeps its `tel:` link through all of this, so it is still tappable.
+That works because a detector reads *rendered text* and never the `href`: the
+visible text is broken up so nothing matches it, while the href stays a clean
+`tel:+94768434334`. Our own anchor is then the only link in play, and it keeps
+the black styling we give it.
+
+That is also the correction to an earlier theory. The blue was never the client
+restyling our anchor — it was the detector building its own link over the top.
+Removing the anchor did not help, which is what proved it; breaking the text
+did. `TAP_TO_CALL` at the top of `js/signature.js` drops the link if a plain
+number is ever wanted instead.
 
 ## Why the preview is an iframe
 

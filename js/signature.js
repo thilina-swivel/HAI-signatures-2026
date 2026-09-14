@@ -49,9 +49,16 @@ const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
 
-// Render phone numbers as tel: links. Off: the Outlook mobile apps force their
-// own blue underline on tel: anchors, which is louder than tap-to-call is useful.
-const TAP_TO_CALL = false;
+// Render phone numbers as tel: links, so they are tappable on a phone.
+//
+// This was off for a while, because a tel: anchor came through in the client's
+// own blue underline. What was actually happening is that the OS detector had
+// matched the number text and built its own link over ours - removing the
+// anchor did not help, which is what proved it. Now that the visible text is
+// broken up so no detector matches it, our own anchor is the only link in play
+// and it keeps the styling we give it. Detectors read rendered text, never the
+// href, so the href stays a clean dialable number.
+const TAP_TO_CALL = true;
 
 const FILES_DIR = "humaniseAI_files";
 
@@ -106,7 +113,7 @@ function phoneText(value, aggressive) {
     return safe.slice(0, mid) + WJ + safe.slice(mid);
   }
   const blocker = aggressive
-    ? `<span aria-hidden="true" style="font-size:0;line-height:0;">x</span>`
+    ? `<span aria-hidden="true" style="font-size:0;line-height:0;color:${INK};text-decoration:none;">x</span>`
     : "";
   return groups.join(`${WJ}&#160;${blocker}${WJ}`);
 }
@@ -204,14 +211,9 @@ function buildSignature(employee, opts = {}) {
   // icon-email.png in and it is picked up here without a code change.
   const mailIcon = ASSETS.email ? ["email", ASSETS.email] : ["address", ASSETS.address];
 
-  // Phone numbers are plain text, not tel: links.
-  //
-  // The nested-span trick holds for every other link - the address is an <a> to
-  // Google Maps and it renders black - but the Outlook mobile apps special-case
-  // phone numbers, restyling them to their own blue underline whatever the
-  // markup says. The only thing that reliably wins is not handing them an
-  // anchor to restyle. Set TAP_TO_CALL back to true to trade the appearance for
-  // a tappable number.
+  // Phone numbers: a clean tel: href for tapping, broken-up text for reading.
+  // The href is never scanned by a detector, so the two do not fight. Set
+  // TAP_TO_CALL to false to drop the link and leave the number as plain text.
   const rows = [];
   if (employee.phone) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Phone", w: 12, h: 12,
