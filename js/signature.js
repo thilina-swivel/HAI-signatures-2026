@@ -24,15 +24,21 @@ const ACCENT = "#5D36FF";   // humaniseAI violet, used for the initials fallback
 const INK = "#000000";
 const GREY = "#8c8c8c";
 
-// The template's own geometry, kept exactly: 480px total, split 142 + 25 + 313.
-// The photo cell carries no padding - it is simply wider than the photo, which
-// is how the template leaves room for the rule that used to sit at its edge.
-// Nothing here is content-box sensitive as a result.
+// 480px total, three columns, same as the template: photo, gutter, content.
+//
+// The template made the photo cell 142px for a 117px photo and then added a
+// 25px gutter, because a coloured rule sat between the two and needed room on
+// both sides. With that rule gone the 25px of slack inside the cell was just
+// dead space, and the photo read as detached from the details. The cell is now
+// exactly the photo, so the gap is one number - GUTTER - and nothing else.
+//
+// The cell carries no padding either way, so none of this is content-box
+// sensitive.
 const WIDTH = 480;
 const PHOTO = 117;
-const PHOTO_CELL = 142;
-const GUTTER = 25;
-const CONTENT = WIDTH - PHOTO_CELL - GUTTER;   // 313
+const PHOTO_CELL = PHOTO;                      // no slack: the gap is GUTTER
+const GUTTER = 30;                             // photo edge -> contact icons
+const CONTENT = WIDTH - PHOTO_CELL - GUTTER;   // 333
 
 // The banner is full-bleed, so it is the table width at the cover's proportions.
 // Recut the artwork and this is the only line to change.
