@@ -191,12 +191,20 @@ function buildSignature(employee, opts = {}) {
   /* ---- target-conditional sizing ----
      Outlook Desktop (Windows) draws mail with the Word engine, which has no
      max-width at all: a fluid table there collapses to its content. So the
-     desktop builds are pinned to 600px and only the web build is allowed to
-     shrink. */
+     desktop builds are pinned and only the web build is allowed to shrink.
+
+     The web build carries max-width on the TABLE but deliberately not on the
+     banner. The Outlook app on Android ignores max-width on a table - it
+     stretches to the full viewport - while still honouring it on an <img>. Put
+     it in both places and the text reflows out to the screen edge while the
+     cover stops at 480, short of everything above it. Leaving the image at a
+     plain width:100% ties it to whatever the table actually became, so the two
+     can never disagree. iOS and the browsers honour the table cap, so there the
+     table stays 480 and the image resolves to the same 480 it always did. */
 
   const tableWidth = target.fluid ? `width:100%;max-width:${WIDTH}px;` : `width:${WIDTH}px;`;
   const bannerStyle = target.fluid
-    ? `display:block;width:100%;max-width:${WIDTH}px;height:auto;border:0;outline:none;`
+    ? `display:block;width:100%;height:auto;border:0;outline:none;`
     : `display:block;width:${WIDTH}px;height:${BANNER_H}px;border:0;outline:none;`;
 
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${WIDTH}" style="${tableWidth}background:#ffffff;border-collapse:collapse;${RESET}font-family:${FONT};">

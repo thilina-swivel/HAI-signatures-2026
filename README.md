@@ -24,6 +24,14 @@ Three things drive those choices:
 - **The Word engine has no `max-width`.** A fluid table collapses to its content
   in classic Outlook, so the desktop builds are pinned to 480px and only the web
   build is allowed to shrink.
+- **The web build caps the table but never the cover image.** The Outlook app on
+  Android ignores `max-width` on a table — it stretches to the full viewport —
+  while still honouring it on an `<img>`. With the cap in both places the text
+  reflowed to the screen edge and the cover stopped at 480, visibly short of
+  everything above it. A plain `width:100%` on the image ties it to whatever the
+  table actually became, so the two can never disagree. iOS and the browsers cap
+  the table at 480, so there the image resolves to the same 480 as before.
+  Do not re-add `max-width` to that image.
 - **Classic Outlook rescales images by the system DPI.** On a 125% display a
   140px photo arrives at 175px. The `<o:PixelsPerInch>96</o:PixelsPerInch>`
   block in the Windows build is what stops it, which is why that build is a
