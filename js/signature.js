@@ -124,7 +124,19 @@ function buildSignature(employee, opts = {}) {
   };
 
   const text = `${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:16px;color:${INK};`;
-  const linkStyle = `${text}text-decoration:none;`;
+
+  // Contact links stay black and unadorned. Styling the <a> alone is not enough:
+  // the Outlook mobile apps restyle tel: and mailto: to their own blue underline,
+  // and the Word engine underlines anchors whatever the anchor says. Declaring
+  // the colour twice - on the <a>, then again on a <span> inside it - is what
+  // holds, because the clients that override the anchor leave the inner span
+  // alone. It is the template's own technique, and the reason it nests a span in
+  // every link it draws.
+  const noLink = `color:${INK} !important;text-decoration:none !important;`;
+  const linkA = `${text}line-height:18px;${noLink}`;
+  const linkSpan = `${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:18px;${noLink}`;
+  const link = (body, href) =>
+    `<a href="${href}" target="_blank" style="${linkA}"><span style="${linkSpan}">${body}</span></a>`;
 
   /* ---- contact rows: one icon + one line, the way the v4 signature had it ---- */
 
@@ -134,7 +146,7 @@ function buildSignature(employee, opts = {}) {
                         <img src="${img(icon, uri)}" width="${w}" height="${h}" alt="${esc(alt)}" style="display:block;width:${w}px;height:${h}px;border:0;outline:none;margin-top:3px;">
                       </td>
                       <td valign="top" style="vertical-align:top;padding:${last ? "0" : "0 0 5px 0"};padding-left:7px;${text}line-height:18px;">
-                        ${href ? `<a href="${href}" target="_blank" style="${linkStyle}line-height:18px;">${body}</a>` : body}
+                        ${href ? link(body, href) : body}
                       </td>
                     </tr>`;
 

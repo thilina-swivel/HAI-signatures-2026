@@ -128,6 +128,23 @@ the template's own: 480px wide, split 142 + 25 + 313, with a full-bleed
 photo, which is how the template left room for the rule that used to sit at its
 edge. Recut the banner and `BANNER_RATIO` is the only line to change.
 
+## Why every link has a span inside it
+
+The contact lines are links — tap-to-call, mailto, the map — but they must read
+as plain black text, not as blue underlined links. Styling the `<a>` alone does
+not survive: the Outlook mobile apps restyle `tel:` and `mailto:` to their own
+blue underline, and the Word engine underlines anchors whatever the anchor says.
+
+So the colour is declared twice, on the `<a>` and again on a `<span>` inside it,
+both with `!important`. The clients that override the anchor leave the inner
+span alone. It is the original template's own technique, and the reason it nests
+a span in every link it draws.
+
+Verified against a stylesheet forcing `color:blue !important` and
+`text-decoration:underline !important` on every `<a>` — harsher than any real
+client — and all four links still compute to black with no underline in all
+three builds. Don't remove either declaration.
+
 ## Why the preview is an iframe
 
 Don't replace the `<iframe>` in `index.html` with a plain `<div>`. When the
