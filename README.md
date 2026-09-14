@@ -11,19 +11,28 @@ server needed. To put it on an intranet or share it, upload the whole folder.
 One layout, three builds. The differences are not cosmetic — they come from how
 each client renders HTML, and they are all declared in `js/targets.js`:
 
-| | Outlook Web / New Outlook | Outlook Desktop (Windows) | Outlook Desktop (Mac) |
+| | Outlook on the web | Outlook for Windows (app) | Outlook for Mac (app) |
 |---|---|---|---|
-| Renderer | Chromium / WebKit | **Word** | WebKit |
-| Images | base64, travel with the paste | loose files in `humaniseAI_files/` | base64 |
-| Width | fluid, `max-width:480px` | fixed `480px` | fixed `480px` |
-| Extra markup | — | MSO conditional head block | — |
-| How it is installed | copy &amp; paste | copy a folder to `%APPDATA%\Microsoft\Signatures` | copy &amp; paste |
+| Renderer | Chromium / WebKit | Chromium | WebKit |
+| Images | base64, travel with the paste | base64 | base64 |
+| Width | fluid, `max-width:480px` | fluid, `max-width:480px` | fixed `480px` |
+| How it is installed | copy &amp; paste | copy &amp; paste | copy &amp; paste |
+
+The new Outlook for Windows is the web client in an app window — same engine,
+same signature store — so its markup is the web build exactly. It is a separate
+tab only because the route to the settings screen differs.
+
+**Classic Outlook is built but not offered.** `outlook-win` is still defined in
+`js/targets.js`, with its Word-engine markup, its MSO DPI block and its ZIP
+package — almost nobody here is still on it, and that route is by far the most
+fiddly, so it is left off `TARGET_ORDER`. Put the id back in that array to bring
+the tab back; nothing else needs changing.
 
 Three things drive those choices:
 
 - **The Word engine has no `max-width`.** A fluid table collapses to its content
-  in classic Outlook, so the desktop builds are pinned to 480px and only the web
-  build is allowed to shrink.
+  in classic Outlook, which is why that build — still there, just not offered —
+  is pinned to 480px.
 - **The web build caps the table but never the cover image.** The Outlook app on
   Android ignores `max-width` on a table — it stretches to the full viewport —
   while still honouring it on an `<img>`. With the cap in both places the text
@@ -127,6 +136,21 @@ the template's own: 480px wide, split 117 + 30 + 333, with a full-bleed
 480 × 70 banner. The template made the photo cell wider than the photo to leave
 room for a coloured rule between the two; with that rule gone the slack was dead
 space, so the cell is now exactly the photo and the gap is one number, `GUTTER`. Recut the banner and `BANNER_RATIO` is the only line to change.
+
+## Two things the Outlook Windows app got wrong
+
+Both were found in the new Outlook for Windows and both are fixed in the shared
+builder, so every build gets them:
+
+- **The icons rode high against the text.** The 3px nudge that centres a 12px
+  icon on an 18px line was a `margin-top` on the `<img>`, and the Word engine
+  ignores margins on images. It is `padding` on the cell now, which Outlook does
+  honour.
+- **Links came through underlined** despite `text-decoration:none !important` on
+  both the `<a>` and the span inside it. That is CSS, not a client quirk:
+  decoration set on an ancestor is *drawn through* its descendants and cannot be
+  cancelled further down. It does not propagate into an `inline-block`, so the
+  inner span is one. Do not remove that `display:inline-block`.
 
 ## Why every link has a span inside it
 

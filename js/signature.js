@@ -45,6 +45,7 @@ const CONTENT = WIDTH - PHOTO_CELL - GUTTER;   // 333
 const BANNER_RATIO = [480, 70];
 const BANNER_H = Math.round((WIDTH * BANNER_RATIO[1]) / BANNER_RATIO[0]);
 
+const ICON_NUDGE = 3;     // (18px line - 12px icon) / 2, as cell padding
 const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
@@ -208,7 +209,13 @@ function buildSignature(employee, opts = {}) {
   // every link it draws.
   const noLink = `color:${INK} !important;text-decoration:none !important;`;
   const linkA = `${text}line-height:18px;${noLink}`;
-  const linkSpan = `${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:18px;${noLink}`;
+  // display:inline-block is the part that actually removes the underline.
+  // text-decoration set on an ancestor is *drawn through* its descendants and
+  // cannot be cancelled by text-decoration:none further down - that is CSS, not
+  // a client quirk, and it is why declaring none on this span was not enough
+  // once a client forced underline on the <a>. Decoration does not propagate
+  // into an inline-block, so making the span one cuts the line off at its edge.
+  const linkSpan = `${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:18px;display:inline-block;${noLink}`;
   // target="_blank" belongs only on http(s). On a tel: or mailto: URI it asks the
   // client to open a new window for a handler that does not render one, and some
   // clients answer by opening a blank tab and never invoking the dialler - which
@@ -220,12 +227,17 @@ function buildSignature(employee, opts = {}) {
 
   /* ---- contact rows: one icon + one line, the way the v4 signature had it ---- */
 
+  // The icon is nudged down to sit on the text's optical centre: the text is
+  // 12px on an 18px line, so (18 - 12) / 2 = 3px. That nudge lives in the cell's
+  // padding, not as a margin on the image - the Word engine ignores margins on
+  // images, which left the icon riding high against the text in the Outlook
+  // Windows app. Padding on a <td> it does honour.
   const row = ({ icon, uri, alt, w, h, body, href, last }) => `
                     <tr>
-                      <td width="12" valign="top" style="width:12px;padding:${last ? "0" : "0 0 5px 0"};vertical-align:top;font-size:0;line-height:0;">
-                        <img src="${img(icon, uri)}" width="${w}" height="${h}" alt="${esc(alt)}" style="display:block;width:${w}px;height:${h}px;border:0;outline:none;margin-top:3px;">
+                      <td width="12" valign="top" style="width:12px;padding:${ICON_NUDGE}px 0 ${last ? "0" : "5px"} 0;vertical-align:top;font-size:0;line-height:0;">
+                        <img src="${img(icon, uri)}" width="${w}" height="${h}" alt="${esc(alt)}" style="display:block;width:${w}px;height:${h}px;border:0;outline:none;">
                       </td>
-                      <td valign="top" style="vertical-align:top;padding:${last ? "0" : "0 0 5px 0"};padding-left:7px;${text}line-height:18px;">
+                      <td valign="top" style="vertical-align:top;padding:0 0 ${last ? "0" : "5px"} 7px;${text}line-height:18px;">
                         ${href ? link(body, href) : body}
                       </td>
                     </tr>`;
