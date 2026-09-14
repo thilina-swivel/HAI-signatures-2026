@@ -152,12 +152,30 @@ them in an anchor of their own, so the client was building a link whatever we
 did. (The giveaway was the address — also an `<a>`, sitting one line below,
 rendering black the whole time.)
 
-The fix is to stop the number looking like a phone number to a detector. A
-U+2060 WORD JOINER between each group leaves no digit run longer than four,
-where detectors need about seven. It is zero-width, so nothing moves — the
-number measures 90.42px with and without it — and unlike a zero-width space it
-creates no line-break opportunity, so the number can never wrap mid-digit. The
-plain-text half of the clipboard is built separately and stays clean.
+The fix is to stop the number looking like a phone number to a detector, and it
+takes two strengths because the platforms differ:
+
+| | What goes between the groups | Detector reads |
+|---|---|---|
+| Base — enough for **iOS** | a U+2060 WORD JOINER | `+94 76 843 4334` with invisible joiners |
+| Aggressive — needed for **Android** | the same, plus a letter at `font-size:0` | `+94 x76 x843 x4334` |
+
+Android normalises zero-width characters away before matching, so the joiner
+alone did nothing there. It cannot normalise away a real letter. Rendered at
+`font-size:0` the letter occupies no space: the number measures 90.42px on the
+desktop builds and 90.45px on the web build — a 0.03px difference.
+
+WORD JOINER rather than a zero-width space on purpose: ZWSP creates a
+line-break opportunity, which could wrap a number mid-digit.
+
+The aggressive form is applied only to the web build (`hidePhone` in
+`js/targets.js`). That is the only build that reaches a phone — a signature set
+in new Outlook syncs to the mobile apps, while the desktop builds stay on the
+machine they are installed on — so the desktop markup stays clean and never
+risks the Word engine mishandling a zero-size font.
+
+The plain-text half of the clipboard is built from the raw field and stays free
+of all of it.
 
 `TAP_TO_CALL` at the top of `js/signature.js` restores the `tel:` link if a
 tappable number is ever worth more than the appearance.

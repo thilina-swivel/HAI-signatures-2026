@@ -73,18 +73,36 @@ const WJ = "&#8288;";
  * A phone number the OS will not turn into a link.
  *
  * iOS and Android detect phone numbers in the rendered *text* and wrap them in
- * their own anchor, which is why neither styling our anchor nor removing it
- * helped - the client was building a new one either way. Their detectors match
- * a run of digits and separators, so a zero-width joiner between the groups
- * leaves nothing long enough to match. Nothing moves by a pixel: the character
- * has no width.
+ * an anchor of their own, which is why neither styling our anchor nor removing
+ * it helped - the client was building a link either way.
+ *
+ * Two strengths, because the two platforms differ:
+ *
+ *   base       a U+2060 WORD JOINER between the groups. Zero-width, no
+ *              line-break opportunity. Enough for iOS.
+ *   aggressive iOS is satisfied by that; Android is not - it normalises
+ *              zero-width characters away before matching. It cannot normalise
+ *              away a real letter, so one is inserted between the groups and
+ *              rendered at font-size:0. The text a detector reads becomes
+ *              "+94 x76 x843 x4334", which is not a phone number by anyone's
+ *              pattern, while the glyph itself occupies no space.
+ *
+ * The aggressive form is used only where it is needed - see hidePhone in
+ * js/targets.js - so the desktop builds keep clean markup and never risk the
+ * Word engine mishandling a zero-size font.
  */
-function phoneText(value) {
+function phoneText(value, aggressive) {
   const safe = esc(value);
-  if (safe.includes(" ")) return safe.replace(/ /g, `${WJ}&#160;${WJ}`);
-  // No spaces to hide behind - split the digits down the middle instead.
-  const mid = Math.floor(safe.length / 2);
-  return safe.slice(0, mid) + WJ + safe.slice(mid);
+  const groups = safe.split(" ");
+  if (groups.length < 2) {
+    // No spaces to hide behind - split the digits down the middle instead.
+    const mid = Math.floor(safe.length / 2);
+    return safe.slice(0, mid) + WJ + safe.slice(mid);
+  }
+  const blocker = aggressive
+    ? `<span aria-hidden="true" style="font-size:0;line-height:0;">x</span>`
+    : "";
+  return groups.join(`${WJ}&#160;${blocker}${WJ}`);
 }
 
 // The file an image becomes inside the Windows package. The extension comes
@@ -191,12 +209,12 @@ function buildSignature(employee, opts = {}) {
   const rows = [];
   if (employee.phone) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Phone", w: 12, h: 12,
-                body: phoneText(employee.phone),
+                body: phoneText(employee.phone, target.hidePhone),
                 href: TAP_TO_CALL ? telHref(employee.phone) : null });
   }
   if (employee.mobile) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Mobile", w: 12, h: 12,
-                body: phoneText(employee.mobile),
+                body: phoneText(employee.mobile, target.hidePhone),
                 href: TAP_TO_CALL ? telHref(employee.mobile) : null });
   }
   if (employee.email) {
