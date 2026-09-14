@@ -43,6 +43,10 @@ const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
 
+// Render phone numbers as tel: links. Off: the Outlook mobile apps force their
+// own blue underline on tel: anchors, which is louder than tap-to-call is useful.
+const TAP_TO_CALL = false;
+
 const FILES_DIR = "humaniseAI_files";
 
 function esc(value = "") {
@@ -154,14 +158,24 @@ function buildSignature(employee, opts = {}) {
   // icon-email.png in and it is picked up here without a code change.
   const mailIcon = ASSETS.email ? ["email", ASSETS.email] : ["address", ASSETS.address];
 
+  // Phone numbers are plain text, not tel: links.
+  //
+  // The nested-span trick holds for every other link - the address is an <a> to
+  // Google Maps and it renders black - but the Outlook mobile apps special-case
+  // phone numbers, restyling them to their own blue underline whatever the
+  // markup says. The only thing that reliably wins is not handing them an
+  // anchor to restyle. Set TAP_TO_CALL back to true to trade the appearance for
+  // a tappable number.
   const rows = [];
   if (employee.phone) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Phone", w: 12, h: 12,
-                body: nbsp(employee.phone), href: telHref(employee.phone) });
+                body: nbsp(employee.phone),
+                href: TAP_TO_CALL ? telHref(employee.phone) : null });
   }
   if (employee.mobile) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Mobile", w: 12, h: 12,
-                body: nbsp(employee.mobile), href: telHref(employee.mobile) });
+                body: nbsp(employee.mobile),
+                href: TAP_TO_CALL ? telHref(employee.mobile) : null });
   }
   if (employee.email) {
     rows.push({ icon: mailIcon[0], uri: mailIcon[1], alt: "Email", w: 11, h: 12,

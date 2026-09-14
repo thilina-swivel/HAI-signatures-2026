@@ -142,8 +142,16 @@ a span in every link it draws.
 
 Verified against a stylesheet forcing `color:blue !important` and
 `text-decoration:underline !important` on every `<a>` — harsher than any real
-client — and all four links still compute to black with no underline in all
-three builds. Don't remove either declaration.
+client — and every link still computes to black with no underline in all three
+builds. Don't remove either declaration.
+
+**Phone numbers are the exception: they are not links at all.** The span trick
+holds everywhere else — the address is an `<a>` to Google Maps and it renders
+black on mobile — but the Outlook apps on iOS and Android special-case phone
+numbers and restyle them to their own blue underline whatever the markup says.
+The only thing that reliably wins is not handing them an anchor. `TAP_TO_CALL`
+at the top of `js/signature.js` flips it back if a tappable number is ever worth
+more than the appearance.
 
 ## Why the preview is an iframe
 
