@@ -21,6 +21,7 @@ window.HAI = window.HAI || {};
 //   fluid      true  -> width:100%;max-width:600px    false -> width:600px
 //   mso        emit the Outlook/Word conditional head block
 //   delivery   "copy" -> clipboard button   "zip" -> downloadable package
+//   hidePhone  break phone numbers hard enough that Android stops linkifying
 // ---------------------------------------------------------------------------
 
 const TARGETS = {
@@ -32,6 +33,11 @@ const TARGETS = {
     fluid: true,
     mso: false,
     delivery: "copy",
+    // Only this build ever reaches a phone: a signature set in new Outlook
+    // syncs to the Outlook mobile apps, while the two desktop builds stay on
+    // the machine they are installed on. So the aggressive phone-number
+    // blocker is confined here, and the desktop builds keep clean markup.
+    hidePhone: true,
     steps: [
       'Visit <a href="https://outlook.office365.com/" target="_blank" rel="noopener">outlook.office365.com</a> and log in.',
       'Click the <strong>Settings</strong> gear (top right).',

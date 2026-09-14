@@ -43,6 +43,10 @@ const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
 
+// Render phone numbers as tel: links. Off: the Outlook mobile apps force their
+// own blue underline on tel: anchors, which is louder than tap-to-call is useful.
+const TAP_TO_CALL = false;
+
 const FILES_DIR = "humaniseAI_files";
 
 function esc(value = "") {
@@ -60,6 +64,46 @@ function slug(name = "") {
 // Phone numbers should never wrap mid-number, so the spaces become non-breaking.
 const nbsp = (value) => esc(value).replace(/ /g, "&#160;");
 const telHref = (value) => "tel:" + String(value).replace(/[^\d+]/g, "");
+
+// U+2060 WORD JOINER: zero-width, and unlike a zero-width space it creates no
+// line-break opportunity, so a number can never wrap mid-digit.
+const WJ = "&#8288;";
+
+/**
+ * A phone number the OS will not turn into a link.
+ *
+ * iOS and Android detect phone numbers in the rendered *text* and wrap them in
+ * an anchor of their own, which is why neither styling our anchor nor removing
+ * it helped - the client was building a link either way.
+ *
+ * Two strengths, because the two platforms differ:
+ *
+ *   base       a U+2060 WORD JOINER between the groups. Zero-width, no
+ *              line-break opportunity. Enough for iOS.
+ *   aggressive iOS is satisfied by that; Android is not - it normalises
+ *              zero-width characters away before matching. It cannot normalise
+ *              away a real letter, so one is inserted between the groups and
+ *              rendered at font-size:0. The text a detector reads becomes
+ *              "+94 x76 x843 x4334", which is not a phone number by anyone's
+ *              pattern, while the glyph itself occupies no space.
+ *
+ * The aggressive form is used only where it is needed - see hidePhone in
+ * js/targets.js - so the desktop builds keep clean markup and never risk the
+ * Word engine mishandling a zero-size font.
+ */
+function phoneText(value, aggressive) {
+  const safe = esc(value);
+  const groups = safe.split(" ");
+  if (groups.length < 2) {
+    // No spaces to hide behind - split the digits down the middle instead.
+    const mid = Math.floor(safe.length / 2);
+    return safe.slice(0, mid) + WJ + safe.slice(mid);
+  }
+  const blocker = aggressive
+    ? `<span aria-hidden="true" style="font-size:0;line-height:0;">x</span>`
+    : "";
+  return groups.join(`${WJ}&#160;${blocker}${WJ}`);
+}
 
 // The file an image becomes inside the Windows package. The extension comes
 // from the data URI itself, so swapping banner.jpg for a PNG stays correct.
@@ -154,14 +198,24 @@ function buildSignature(employee, opts = {}) {
   // icon-email.png in and it is picked up here without a code change.
   const mailIcon = ASSETS.email ? ["email", ASSETS.email] : ["address", ASSETS.address];
 
+  // Phone numbers are plain text, not tel: links.
+  //
+  // The nested-span trick holds for every other link - the address is an <a> to
+  // Google Maps and it renders black - but the Outlook mobile apps special-case
+  // phone numbers, restyling them to their own blue underline whatever the
+  // markup says. The only thing that reliably wins is not handing them an
+  // anchor to restyle. Set TAP_TO_CALL back to true to trade the appearance for
+  // a tappable number.
   const rows = [];
   if (employee.phone) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Phone", w: 12, h: 12,
-                body: nbsp(employee.phone), href: telHref(employee.phone) });
+                body: phoneText(employee.phone, target.hidePhone),
+                href: TAP_TO_CALL ? telHref(employee.phone) : null });
   }
   if (employee.mobile) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Mobile", w: 12, h: 12,
-                body: nbsp(employee.mobile), href: telHref(employee.mobile) });
+                body: phoneText(employee.mobile, target.hidePhone),
+                href: TAP_TO_CALL ? telHref(employee.mobile) : null });
   }
   if (employee.email) {
     rows.push({ icon: mailIcon[0], uri: mailIcon[1], alt: "Email", w: 11, h: 12,
