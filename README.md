@@ -177,8 +177,46 @@ risks the Word engine mishandling a zero-size font.
 The plain-text half of the clipboard is built from the raw field and stays free
 of all of it.
 
-`TAP_TO_CALL` at the top of `js/signature.js` restores the `tel:` link if a
-tappable number is ever worth more than the appearance.
+That is also the correction to an earlier theory. The blue was never the client
+restyling our anchor — it was the detector building its own link over the top.
+Removing the anchor did not help, which is what proved it; breaking the text did.
+
+### Why the phone number is not a link
+
+**Outlook's signature editor keeps only `http(s)` hrefs.** `tel:` and `mailto:`
+are stripped on paste, before the client ever renders them. Confirmed by
+elimination: the same signature opened in a browser has every link working, but
+installed as an Outlook signature only the `https` ones respond — the address,
+the website pill and the social icons — on Android, iOS and desktop alike.
+
+No amount of markup fixes that: the href is gone before rendering. Which leaves
+the OS detector as the only thing that can make the number tappable — and the
+link it builds carries the client's own blue, out of our reach. It injects its
+own anchor inside ours, and the CSS that would tame it
+(`a[x-apple-data-detectors]`) lives in a `<style>` block the same editor strips.
+
+So `PHONE_DETECTION` at the top of `js/signature.js` is the choice, and it is a
+real one:
+
+| | `"allow"` *(current)* | `"block"` |
+|---|---|---|
+| Number is | tappable | not tappable |
+| Colour in Outlook | the client's blue | black |
+| How | left intact, the OS links it | broken up so nothing matches |
+
+Black **and** tappable needs an `https` href, since that is the one scheme that
+survives the sanitiser — a redirect route on the website pointing at `tel:`.
+Until that exists, it is one or the other.
+
+The email keeps its `mailto:` anchor. Outlook strips it too, so it reads as plain
+black text there — the same outcome — but it costs nothing and still works in
+the downloaded `.html` and in clients that do preserve it.
+
+| Scheme | In a browser | In an Outlook signature |
+|---|---|---|
+| `https:` — address, website, socials | works | **works** |
+| `mailto:` — email | works | stripped |
+| `tel:` — phone | works | stripped |
 
 ## Why the preview is an iframe
 
