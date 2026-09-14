@@ -49,16 +49,17 @@ const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
 
-// Render phone numbers as tel: links, so they are tappable on a phone.
+// Render phone numbers as tel: links. Off, and it has to be.
 //
-// This was off for a while, because a tel: anchor came through in the client's
-// own blue underline. What was actually happening is that the OS detector had
-// matched the number text and built its own link over ours - removing the
-// anchor did not help, which is what proved it. Now that the visible text is
-// broken up so no detector matches it, our own anchor is the only link in play
-// and it keeps the styling we give it. Detectors read rendered text, never the
-// href, so the href stays a clean dialable number.
-const TAP_TO_CALL = true;
+// Outlook's signature editor sanitises what it is given and keeps only http(s)
+// hrefs: a tel: link is stripped on paste, before the client ever renders it.
+// Tested by hand - in a browser every link works, and in an Outlook signature
+// only the https ones survive. So a tel: anchor cannot be made to work here by
+// any amount of markup, and carrying one would only promise something the
+// number cannot deliver. The number is plain text instead.
+//
+// Turning this on makes the number tappable anywhere that is not Outlook.
+const TAP_TO_CALL = false;
 
 const FILES_DIR = "humaniseAI_files";
 
