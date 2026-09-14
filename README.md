@@ -189,10 +189,24 @@ elimination: the same signature opened in a browser has every link working, but
 installed as an Outlook signature only the `https` ones respond — the address,
 the website pill and the social icons — on Android, iOS and desktop alike.
 
-No amount of markup fixes that: the href is gone before rendering. So the number
-is plain text, and carrying a `tel:` anchor would only promise something it
-cannot deliver. `TAP_TO_CALL` at the top of `js/signature.js` turns it back on
-for anywhere that is not Outlook.
+No amount of markup fixes that: the href is gone before rendering. Which leaves
+the OS detector as the only thing that can make the number tappable — and the
+link it builds carries the client's own blue, out of our reach. It injects its
+own anchor inside ours, and the CSS that would tame it
+(`a[x-apple-data-detectors]`) lives in a `<style>` block the same editor strips.
+
+So `PHONE_DETECTION` at the top of `js/signature.js` is the choice, and it is a
+real one:
+
+| | `"allow"` *(current)* | `"block"` |
+|---|---|---|
+| Number is | tappable | not tappable |
+| Colour in Outlook | the client's blue | black |
+| How | left intact, the OS links it | broken up so nothing matches |
+
+Black **and** tappable needs an `https` href, since that is the one scheme that
+survives the sanitiser — a redirect route on the website pointing at `tel:`.
+Until that exists, it is one or the other.
 
 The email keeps its `mailto:` anchor. Outlook strips it too, so it reads as plain
 black text there — the same outcome — but it costs nothing and still works in

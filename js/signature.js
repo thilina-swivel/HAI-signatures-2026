@@ -49,16 +49,26 @@ const SOCIAL = 19;        // round social icons
 const PILL_W = 67;        // the humaniseai.io pill
 const PILL_H = 19;
 
-// Render phone numbers as tel: links. Off, and it has to be.
+// Phone numbers: tappable, or black. In Outlook you cannot have both.
 //
-// Outlook's signature editor sanitises what it is given and keeps only http(s)
-// hrefs: a tel: link is stripped on paste, before the client ever renders it.
-// Tested by hand - in a browser every link works, and in an Outlook signature
-// only the https ones survive. So a tel: anchor cannot be made to work here by
-// any amount of markup, and carrying one would only promise something the
-// number cannot deliver. The number is plain text instead.
+// Outlook's signature editor keeps only http(s) hrefs, so our own tel: anchor
+// is stripped on paste and can never make the number tappable. The only thing
+// that can is the OS phone-number detector - and the link it builds carries the
+// client's own blue, which we cannot reach: it injects its own anchor inside
+// ours, and the CSS that would tame it (a[x-apple-data-detectors]) lives in a
+// <style> block the same editor strips.
 //
-// Turning this on makes the number tappable anywhere that is not Outlook.
+// So it comes down to whether the detector is allowed to fire:
+//
+//   "allow"  leave the number intact. The OS links it - tappable, and blue.
+//   "block"  break the number up so nothing matches - black, not tappable.
+//
+// Black AND tappable needs an https href, because that is the one scheme that
+// survives: a redirect route on the website pointing at tel:. Until that
+// exists, this is the choice.
+const PHONE_DETECTION = "allow";
+
+// Only meaningful while PHONE_DETECTION is "block".
 const TAP_TO_CALL = false;
 
 const FILES_DIR = "humaniseAI_files";
@@ -106,6 +116,12 @@ const WJ = "&#8288;";
  * Word engine mishandling a zero-size font.
  */
 function phoneText(value, aggressive) {
+  // Hand the detector a clean, ordinary phone number and let it do its job.
+  // The span is a best effort at keeping it black: a client that injects its own
+  // coloured anchor still wins, but one that injects a bare anchor inherits this.
+  if (PHONE_DETECTION === "allow") {
+    return `<span style="color:${INK} !important;text-decoration:none !important;">${nbsp(value)}</span>`;
+  }
   const safe = esc(value);
   const groups = safe.split(" ");
   if (groups.length < 2) {
