@@ -1,15 +1,49 @@
 window.HAI = window.HAI || {};
 
 (function () {
-const { ASSETS, PHOTOS, COMPANY } = HAI;
+const { ASSETS, PHOTOS, COMPANY, TARGETS, DEFAULT_TARGET } = HAI;
 
-// Builds the humaniseAI email signature markup for one person.
-// The output mirrors the approved v4 layout: nested tables, inline styles only,
-// and base64 images - the combination Outlook, Gmail and Apple Mail all tolerate.
-
+// ---------------------------------------------------------------------------
+// Builds the humaniseAI email signature for one person, for one client.
+//
+// The layout follows the "Furnish your space" template: a photo on the left
+// behind a coloured rule, pipe-separated contact lines on the right, a social
+// row, then a full-bleed banner. Same technique as the original - one table,
+// inline styles only, no class attributes, images sized in both the HTML
+// attribute and the inline style.
+//
+// What changes per client is described in js/targets.js. Everything here reads
+// those flags rather than branching on client names, so adding a fourth target
+// is a data change, not a code change.
+// ---------------------------------------------------------------------------
 
 const FONT = "'Aptos','Segoe UI',Arial,Helvetica,sans-serif";
 const RESET = "-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;mso-line-height-rule:exactly;";
+
+const ACCENT = "#5D36FF";   // humaniseAI violet, used for the initials fallback
+const INK = "#000000";
+const GREY = "#8c8c8c";
+
+// The template's own geometry, kept exactly: 480px total, split 142 + 25 + 313.
+// The photo cell carries no padding - it is simply wider than the photo, which
+// is how the template leaves room for the rule that used to sit at its edge.
+// Nothing here is content-box sensitive as a result.
+const WIDTH = 480;
+const PHOTO = 117;
+const PHOTO_CELL = 142;
+const GUTTER = 25;
+const CONTENT = WIDTH - PHOTO_CELL - GUTTER;   // 313
+
+// The banner is full-bleed, so it is the table width at the cover's proportions.
+// Recut the artwork and this is the only line to change.
+const BANNER_RATIO = [480, 70];
+const BANNER_H = Math.round((WIDTH * BANNER_RATIO[1]) / BANNER_RATIO[0]);
+
+const SOCIAL = 19;        // round social icons
+const PILL_W = 67;        // the humaniseai.io pill
+const PILL_H = 19;
+
+const FILES_DIR = "humaniseAI_files";
 
 function esc(value = "") {
   return String(value)
@@ -27,6 +61,15 @@ function slug(name = "") {
 const nbsp = (value) => esc(value).replace(/ /g, "&#160;");
 const telHref = (value) => "tel:" + String(value).replace(/[^\d+]/g, "");
 
+// The file an image becomes inside the Windows package. The extension comes
+// from the data URI itself, so swapping banner.jpg for a PNG stays correct.
+function fileNameFor(key, uri) {
+  const ext = /^data:image\/jpe?g/i.test(uri) ? "jpg"
+    : /^data:image\/gif/i.test(uri) ? "gif"
+    : "png";
+  return `${key}.${ext}`;
+}
+
 // No photo on file yet: draw the person's initials so the layout still holds.
 const AVATAR_CACHE = new Map();
 
@@ -38,13 +81,13 @@ function initialsAvatar(name) {
     .slice(0, 2)
     .map((word) => word[0].toUpperCase())
     .join("");
-  const size = 240;
+  const size = PHOTO * 2;                 // 2x, same rule as every other asset
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "#e8eaed";
+  ctx.fillStyle = "#efeaff";
   ctx.fillRect(0, 0, size, size);
-  ctx.fillStyle = "#6b7280";
+  ctx.fillStyle = ACCENT;
   ctx.font = `500 ${size * 0.36}px 'Segoe UI', Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -58,126 +101,139 @@ function photoFor(employee) {
   return PHOTOS[employee.photo] || initialsAvatar(employee.name);
 }
 
-// One icon + text row (phone, address, email).
-function detailRow({ icon, alt, width, height, text, href, last }) {
-  const pad = last ? "0" : "0 0 5px 0";
-  const linkStyle = `color:#000000;text-decoration:none;${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:16px;`;
-  const body = href
-    ? `<a href="${href}" target="_blank" style="${linkStyle}">${text}</a>`
-    : text;
-  return `
+/**
+ * One signature, built for one target.
+ *
+ * opts.target     id from js/targets.js
+ * opts.imageMode  override "data" | "files" (the preview forces "data", since
+ *                 an iframe cannot resolve humaniseAI_files/)
+ * opts.collect    optional Map, filled with filename -> data URI for every
+ *                 image actually referenced. The packager uses it so the ZIP
+ *                 holds exactly what the markup asks for, never more or less.
+ */
+function buildSignature(employee, opts = {}) {
+  const target = TARGETS[opts.target] || TARGETS[DEFAULT_TARGET];
+  const mode = opts.imageMode || target.imageMode;
+  const collect = opts.collect;
+
+  // Resolve an image to a src, recording it on the way through.
+  const img = (key, uri) => {
+    const name = fileNameFor(key, uri);
+    if (collect) collect.set(name, uri);
+    return mode === "files" ? `${FILES_DIR}/${name}` : uri;
+  };
+
+  const text = `${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:16px;color:${INK};`;
+  const linkStyle = `${text}text-decoration:none;`;
+
+  /* ---- contact rows: one icon + one line, the way the v4 signature had it ---- */
+
+  const row = ({ icon, uri, alt, w, h, body, href, last }) => `
                     <tr>
-                      <td width="12" valign="top" style="width:12px;padding:${pad};vertical-align:top;font-size:0;line-height:0;">
-                        <img src="${icon}" width="${width}" height="${height}" alt="${esc(alt)}" style="display:block;width:${width}px;height:${height}px;border:0;outline:none;margin-top:3px;">
+                      <td width="12" valign="top" style="width:12px;padding:${last ? "0" : "0 0 5px 0"};vertical-align:top;font-size:0;line-height:0;">
+                        <img src="${img(icon, uri)}" width="${w}" height="${h}" alt="${esc(alt)}" style="display:block;width:${w}px;height:${h}px;border:0;outline:none;margin-top:3px;">
                       </td>
-                      <td valign="top" style="vertical-align:top;padding:${pad};padding-left:5px;${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:18px;color:#000000;">
-                        ${body}
+                      <td valign="top" style="vertical-align:top;padding:${last ? "0" : "0 0 5px 0"};padding-left:7px;${text}line-height:18px;">
+                        ${href ? `<a href="${href}" target="_blank" style="${linkStyle}line-height:18px;">${body}</a>` : body}
                       </td>
                     </tr>`;
-}
 
-function socialCells() {
-  const cells = [
-    {
-      url: COMPANY.website,
-      img: ASSETS.website,
-      alt: "humaniseai.io",
-      w: 67,
-      h: 19,
-    },
-    ...COMPANY.social.map((s) => ({ url: s.url, img: ASSETS[s.key], alt: s.label, w: 19, h: 19 })),
-  ].filter((cell) => cell.img);
+  // No envelope in assets/ yet, so email borrows the address icon - drop an
+  // icon-email.png in and it is picked up here without a code change.
+  const mailIcon = ASSETS.email ? ["email", ASSETS.email] : ["address", ASSETS.address];
 
-  return cells
-    .map((cell, i) => {
-      const pad = i === cells.length - 1 ? "0" : "0 11px 0 0";
-      return `
-                      <td valign="middle" style="vertical-align:middle;padding:${pad};font-size:0;line-height:0;">
-                        <a href="${esc(cell.url)}" target="_blank" style="text-decoration:none;border:0;"><img src="${cell.img}" width="${cell.w}" height="${cell.h}" alt="${esc(cell.alt)}" style="display:block;width:${cell.w}px;height:${cell.h}px;border:0;outline:none;"></a>
-                      </td>`;
-    })
-    .join("");
-}
-
-/** The signature itself: one <table> ready to drop into an email client. */
-function buildSignature(employee) {
   const rows = [];
   if (employee.phone) {
-    rows.push({
-      icon: ASSETS.phone,
-      alt: "Phone",
-      width: 12,
-      height: 12,
-      text: nbsp(employee.phone),
-      href: telHref(employee.phone),
-    });
+    rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Phone", w: 12, h: 12,
+                body: nbsp(employee.phone), href: telHref(employee.phone) });
+  }
+  if (employee.mobile) {
+    rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Mobile", w: 12, h: 12,
+                body: nbsp(employee.mobile), href: telHref(employee.mobile) });
   }
   if (employee.email) {
-    rows.push({
-      icon: ASSETS.address,
-      alt: "Email",
-      width: 11,
-      height: 12,
-      text: esc(employee.email),
-      href: "mailto:" + employee.email,
-    });
+    rows.push({ icon: mailIcon[0], uri: mailIcon[1], alt: "Email", w: 11, h: 12,
+                body: esc(employee.email), href: "mailto:" + esc(employee.email) });
   }
   if (COMPANY.address) {
-    rows.push({
-      icon: ASSETS.address,
-      alt: "Address",
-      width: 11,
-      height: 12,
-      text: esc(COMPANY.address),
-      href: COMPANY.mapUrl,
-    });
+    rows.push({ icon: "address", uri: ASSETS.address, alt: "Address", w: 11, h: 12,
+                body: esc(COMPANY.address), href: COMPANY.mapUrl });
   }
-  const details = rows
-    .map((row, i) => detailRow({ ...row, last: i === rows.length - 1 }))
+
+  const contact = rows.map((r, i) => row({ ...r, last: i === rows.length - 1 })).join("");
+
+  /* ---- social row ---- */
+
+  const cells = [
+    { url: COMPANY.website, key: "website", uri: ASSETS.website, alt: "humaniseai.io", w: PILL_W, h: PILL_H },
+    ...COMPANY.social.map((s) => ({ url: s.url, key: s.key, uri: ASSETS[s.key], alt: s.label, w: SOCIAL, h: SOCIAL })),
+  ].filter((cell) => cell.uri);
+
+  const socials = cells
+    .map((cell, i) => `
+                    <td valign="middle" style="vertical-align:middle;padding:${i === cells.length - 1 ? "0" : "0 11px 0 0"};font-size:0;line-height:0;">
+                      <a href="${esc(cell.url)}" target="_blank" style="text-decoration:none;border:0;"><img src="${img(cell.key, cell.uri)}" width="${cell.w}" height="${cell.h}" alt="${esc(cell.alt)}" style="display:block;width:${cell.w}px;height:${cell.h}px;border:0;outline:none;"></a>
+                    </td>`)
     .join("");
 
-  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%;max-width:600px;background:#ffffff;border-collapse:collapse;${RESET}font-family:${FONT};">
+  const socialRow = socials
+    ? `
+              <tr>
+                <td style="padding:12px 0 0 0;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+                    <tr>${socials}
+                    </tr>
+                  </table>
+                </td>
+              </tr>`
+    : "";
+
+  /* ---- target-conditional sizing ----
+     Outlook Desktop (Windows) draws mail with the Word engine, which has no
+     max-width at all: a fluid table there collapses to its content. So the
+     desktop builds are pinned to 600px and only the web build is allowed to
+     shrink. */
+
+  const tableWidth = target.fluid ? `width:100%;max-width:${WIDTH}px;` : `width:${WIDTH}px;`;
+  const bannerStyle = target.fluid
+    ? `display:block;width:100%;max-width:${WIDTH}px;height:auto;border:0;outline:none;`
+    : `display:block;width:${WIDTH}px;height:${BANNER_H}px;border:0;outline:none;`;
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="${WIDTH}" style="${tableWidth}background:#ffffff;border-collapse:collapse;${RESET}font-family:${FONT};">
 
   <tr>
     <td style="padding:14px 0 14px 0;">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;table-layout:fixed;">
         <tr>
 
-          <td width="138" valign="top" style="width:138px;padding:0 18px 0 0;vertical-align:top;font-size:0;line-height:0;">
-            <img src="${photoFor(employee)}" width="120" height="120" alt="${esc(employee.name)}" style="display:block;width:120px;height:120px;border:0;outline:none;text-decoration:none;">
+          <td width="${PHOTO_CELL}" valign="top" style="width:${PHOTO_CELL}px;padding:0;vertical-align:top;font-size:0;line-height:0;">
+            <img src="${img("photo", photoFor(employee))}" width="${PHOTO}" height="${PHOTO}" alt="${esc(employee.name)}" style="display:block;width:${PHOTO}px;height:${PHOTO}px;border:0;outline:none;text-decoration:none;">
           </td>
 
-          <td valign="top" style="vertical-align:top;">
+          <td width="${GUTTER}" style="width:${GUTTER}px;font-size:0;line-height:0;">&#160;</td>
+
+          <td width="${CONTENT}" valign="top" style="width:${CONTENT}px;vertical-align:top;">
             <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="width:100%;border-collapse:collapse;">
 
               <tr>
-                <td style="padding:0 0 4px 0;${RESET}font-family:${FONT};font-weight:500;font-size:15px;line-height:19px;color:#000000;">
+                <td style="padding:0 0 3px 0;${RESET}font-family:${FONT};font-weight:700;font-size:16px;line-height:20px;color:${INK};">
                   ${esc(employee.name)}
                 </td>
               </tr>
 
               <tr>
-                <td style="padding:0 0 10px 0;${RESET}font-family:${FONT};font-weight:600;font-size:11px;letter-spacing:2.25px;line-height:16px;color:#000000;">
-                  ${esc(String(employee.title || "").toUpperCase())}
-                </td>
-              </tr>
-
-              <tr>
-                <td style="padding:0 0 11px 0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">${details}
-                  </table>
+                <td style="padding:0 0 10px 0;${RESET}font-family:${FONT};font-weight:400;font-size:12px;line-height:16px;color:${INK};">
+                  ${esc(employee.title || "")}
                 </td>
               </tr>
 
               <tr>
                 <td style="padding:0;">
-                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
-                    <tr>${socialCells()}
-                    </tr>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">${contact}
                   </table>
                 </td>
               </tr>
-
+${socialRow}
             </table>
           </td>
 
@@ -188,12 +244,12 @@ function buildSignature(employee) {
 
   <tr>
     <td style="padding:0;font-size:0;line-height:0;">
-      <img src="${ASSETS.banner}" width="600" height="82" alt="${esc(COMPANY.bannerAlt)}" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;">
+      <img src="${img("banner", ASSETS.banner)}" width="${WIDTH}" height="${BANNER_H}" alt="${esc(COMPANY.bannerAlt)}" style="${bannerStyle}">
     </td>
   </tr>
 
   <tr>
-    <td style="padding:12px 0 14px 0;${RESET}font-family:${FONT};font-size:11px;line-height:15px;color:#8c8c8c;">
+    <td style="padding:12px 0 14px 0;${RESET}font-family:${FONT};font-size:11px;line-height:15px;color:${GREY};">
       ${esc(COMPANY.disclaimer)}
     </td>
   </tr>
@@ -201,33 +257,56 @@ function buildSignature(employee) {
 </table>`;
 }
 
-/** Plain-text fallback, used for the text/plain half of the clipboard. */
+/** Plain-text fallback: the text/plain half of the clipboard, and humaniseAI.txt. */
 function buildPlainText(employee) {
   return [
     employee.name,
-    String(employee.title || "").toUpperCase(),
-    employee.phone,
-    employee.email,
+    employee.title,
+    [employee.phone && `P: ${employee.phone}`, employee.mobile && `M: ${employee.mobile}`]
+      .filter(Boolean).join("  |  "),
+    employee.email && `E: ${employee.email}`,
+    COMPANY.website.replace(/^https?:\/\//, "").replace(/\/$/, ""),
     COMPANY.address,
-    COMPANY.website.replace(/\/$/, ""),
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-/** A complete, standalone .html file - what the download button hands over. */
-function buildDocument(employee) {
+/** A complete, standalone document - the download, and humaniseAI.htm. */
+function buildDocument(employee, opts = {}) {
+  const target = TARGETS[opts.target] || TARGETS[DEFAULT_TARGET];
+
+  // Classic Outlook rescales images by the system DPI unless this block tells
+  // it the artwork is already at 96 DPI. Without it a 140px photo balloons to
+  // 175px on a 125% display - the single most common "why is it huge" report.
+  const mso = target.mso
+    ? `<!--[if gte mso 9]><xml>
+<o:OfficeDocumentSettings>
+<o:AllowPNG/>
+<o:PixelsPerInch>96</o:PixelsPerInch>
+</o:OfficeDocumentSettings>
+</xml><![endif]-->
+<!--[if mso]>
+<style type="text/css">
+  table, td, span, a, p, strong { font-family: 'Aptos', 'Segoe UI', Arial, sans-serif !important; }
+</style>
+<![endif]-->
+`
+    : "";
+
+  const ns = target.mso ? ` xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"` : "";
+
   return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<html xmlns="http://www.w3.org/1999/xhtml"${ns} lang="en">
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="x-apple-disable-message-reformatting" />
 <title>${esc(employee.name)} - ${esc(COMPANY.name)} Email Signature</title>
-</head>
-<body style="margin:0;padding:20px;background:#f2f2f2;">
+${mso}</head>
+<body style="margin:0;padding:${target.delivery === "zip" ? "0" : "20px"};background:#ffffff;">
 
-${buildSignature(employee)}
+${buildSignature(employee, opts)}
 
 </body>
 </html>
@@ -241,4 +320,5 @@ HAI.photoFor = photoFor;
 HAI.buildSignature = buildSignature;
 HAI.buildPlainText = buildPlainText;
 HAI.buildDocument = buildDocument;
+HAI.FILES_DIR = FILES_DIR;
 })();

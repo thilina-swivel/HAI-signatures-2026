@@ -7,7 +7,8 @@ window.HAI = window.HAI || {};
 // Fields per person:
 //   name     required - shown in the list and as the signature name
 //   title    required - job title (rendered in uppercase, letter-spaced)
-//   phone    optional - as it should read, e.g. "+94 76 843 4334"
+//   phone    optional - landline/desk, as it should read, e.g. "+94 76 843 4334"
+//   mobile   optional - adds the "M:" segment next to "P:"; omit to leave it out
 //   email    optional - adds an email row to the signature; omit to leave it out
 //   photo    optional - id from js/photos.js (run build/embed-assets.py to see ids).
 //                       No photo? Initials are drawn automatically.

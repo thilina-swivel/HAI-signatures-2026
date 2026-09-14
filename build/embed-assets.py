@@ -8,21 +8,75 @@ Run from the project root:   python3 build/embed-assets.py
   assets/          -> js/assets.js   (icons, logo, banner: shared by everyone)
   Profile photoes/ -> js/photos.js   (one entry per employee, keyed by slug)
 """
-import base64, pathlib, re, sys
+import base64, pathlib, re, struct, sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif"}
+
+# How big each image is DRAWN in the signature. Artwork should be supplied at
+# twice this, so it stays sharp on high-DPI screens - the signature always
+# declares the 1x size in both the HTML attribute and the inline style, which is
+# also what stops classic Outlook rescaling it by the system DPI.
+DISPLAY = {
+    "banner.jpg": (480, 70),          # full-bleed: the cover strip
+    "icon-phone.png": (12, 12),
+    "icon-address.png": (11, 12),
+    "icon-email.png": (11, 12),
+    "icon-linkedin.png": (19, 19),
+    "icon-facebook.png": (19, 19),
+    "icon-instagram.png": (19, 19),
+    "logo-web.png": (67, 19),
+    "__photo__": (117, 117),          # anything in "Profile photoes/"
+}
 
 # assets/<file> -> key used in js/assets.js
 SHARED = {
     "icon-phone.png": "phone",
     "icon-address.png": "address",
+    "icon-email.png": "email",        # optional - an envelope; email falls back
+                                      # to the address pin until you add one
     "icon-linkedin.png": "linkedin",
     "icon-facebook.png": "facebook",
     "icon-instagram.png": "instagram",
     "logo-web.png": "website",
     "banner.jpg": "banner",
 }
+
+
+def dimensions(data: bytes):
+    """Width/height straight out of the file header - no Pillow, no install."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return struct.unpack(">II", data[16:24])
+    if data[:3] == b"GIF":
+        return struct.unpack("<HH", data[6:10])
+    if data[:2] == b"\xff\xd8":                      # JPEG: walk to the SOF marker
+        i = 2
+        while i < len(data) - 9:
+            if data[i] != 0xFF:
+                i += 1
+                continue
+            marker = data[i + 1]
+            if 0xC0 <= marker <= 0xCF and marker not in (0xC4, 0xC8, 0xCC):
+                h, w = struct.unpack(">HH", data[i + 5 : i + 9])
+                return w, h
+            i += 2 + struct.unpack(">H", data[i + 2 : i + 4])[0]
+    return None
+
+
+def check_size(path: pathlib.Path, data: bytes, display) -> None:
+    """Warn when artwork is below 2x, or the wrong shape. Never fatal."""
+    size = dimensions(data)
+    if not size or not display:
+        return
+    w, h = size
+    want_w, want_h = display[0] * 2, display[1] * 2
+    if w < want_w or h < want_h:
+        print(f"  ! {path.name} is {w}x{h}; supply {want_w}x{want_h} or larger "
+              f"(drawn at {display[0]}x{display[1]}) - it will look soft", file=sys.stderr)
+    if display[1] and abs((w / h) - (display[0] / display[1])) > 0.05 * (display[0] / display[1]):
+        print(f"  ! {path.name} is {w}x{h}, but it is drawn at "
+              f"{display[0]}x{display[1]} - the aspect ratio does not match, so it will squash",
+              file=sys.stderr)
 
 
 def data_uri(path: pathlib.Path) -> str:
@@ -57,6 +111,7 @@ def main() -> None:
         if not path.exists():
             print(f"  ! missing {path.relative_to(ROOT)} - skipped", file=sys.stderr)
             continue
+        check_size(path, path.read_bytes(), DISPLAY.get(filename))
         shared[key] = data_uri(path)
 
     photos = {}
@@ -64,10 +119,12 @@ def main() -> None:
     if photo_dir.is_dir():
         for path in sorted(photo_dir.iterdir()):
             if path.suffix.lower() in MIME and not path.name.startswith("."):
+                check_size(path, path.read_bytes(), DISPLAY["__photo__"])
                 photos[slug(path.stem)] = data_uri(path)
     # Fahima's approved photo lives in assets/ (it was extracted from her v4 signature).
     fahima = ROOT / "assets" / "photo-fahima.png"
     if fahima.exists():
+        check_size(fahima, fahima.read_bytes(), DISPLAY["__photo__"])
         photos["fahima"] = data_uri(fahima)
 
     print("Embedding images:")
