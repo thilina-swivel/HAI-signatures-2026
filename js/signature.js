@@ -192,8 +192,14 @@ function buildSignature(employee, opts = {}) {
   const noLink = `color:${INK} !important;text-decoration:none !important;`;
   const linkA = `${text}line-height:18px;${noLink}`;
   const linkSpan = `${RESET}font-family:${FONT};font-weight:500;font-size:12px;line-height:18px;${noLink}`;
-  const link = (body, href) =>
-    `<a href="${href}" target="_blank" style="${linkA}"><span style="${linkSpan}">${body}</span></a>`;
+  // target="_blank" belongs only on http(s). On a tel: or mailto: URI it asks the
+  // client to open a new window for a handler that does not render one, and some
+  // clients answer by opening a blank tab and never invoking the dialler - which
+  // reads as a number that simply does not respond to a tap.
+  const link = (body, href) => {
+    const blank = /^https?:/i.test(href) ? ' target="_blank" rel="noopener"' : "";
+    return `<a href="${href}"${blank} style="${linkA}"><span style="${linkSpan}">${body}</span></a>`;
+  };
 
   /* ---- contact rows: one icon + one line, the way the v4 signature had it ---- */
 
