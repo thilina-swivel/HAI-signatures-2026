@@ -27,8 +27,8 @@ window.HAI = window.HAI || {};
 const TARGETS = {
   "outlook-web": {
     id: "outlook-web",
-    label: "Outlook Web / New Outlook",
-    blurb: "outlook.office365.com in a browser, or the new Outlook app",
+    label: "Outlook on the web",
+    blurb: "outlook.office365.com in a browser",
     imageMode: "data",
     fluid: true,
     mso: false,
@@ -48,6 +48,31 @@ const TARGETS = {
       'Click <strong>Save</strong>, then open a new email to check it.',
     ],
     note: 'Images are embedded in the paste, so they keep working even after this page moves.',
+  },
+
+  "outlook-windows-app": {
+    id: "outlook-windows-app",
+    label: "Outlook for Windows (app)",
+    blurb: "the new Outlook app on Windows 10 / 11",
+    // The new Outlook for Windows is the web client in an app window - same
+    // rendering engine, same signature store, so the markup is the web build
+    // exactly. Only the route to the settings screen differs, which is why this
+    // is a separate tab rather than a line in the web instructions.
+    imageMode: "data",
+    fluid: true,
+    mso: false,
+    delivery: "copy",
+    hidePhone: true,
+    steps: [
+      'Open <strong>Outlook</strong>. If the <strong>New Outlook</strong> toggle in the top right is off, turn it on — these steps are for the new app.',
+      'Click the <strong>Settings</strong> gear (top right).',
+      'Go to <strong>Accounts</strong> &#8594; <strong>Signatures</strong>.',
+      'Select <strong>+ New signature</strong> and name it <em>humaniseAI</em>.',
+      'Come back here, press <strong>Copy signature</strong>, click inside the Outlook editing box and paste with <kbd>Ctrl</kbd>&#160;+&#160;<kbd>V</kbd>.',
+      'Under <strong>Select default signatures</strong>, choose it for <strong>New messages</strong> and <strong>Replies/forwards</strong>.',
+      'Click <strong>Save</strong>, then open a new email to check it.',
+    ],
+    note: 'The signature is stored on your account, not on the PC, so it follows you to Outlook on the web and to the phone apps automatically.',
   },
 
   "outlook-win": {
@@ -72,7 +97,7 @@ const TARGETS = {
 
   "outlook-mac": {
     id: "outlook-mac",
-    label: "Outlook Desktop (Mac)",
+    label: "Outlook for Mac (app)",
     blurb: "the Outlook app on macOS",
     imageMode: "data",
     fluid: false,
@@ -92,6 +117,10 @@ const TARGETS = {
 };
 
 HAI.TARGETS = TARGETS;
-HAI.TARGET_ORDER = ["outlook-web", "outlook-win", "outlook-mac"];
+// Classic Outlook ("outlook-win") is deliberately absent from this list: almost
+// nobody here is still on it, and its ZIP-package route is by far the most
+// fiddly. The build itself is left intact above - put the id back in this array
+// to bring the tab back.
+HAI.TARGET_ORDER = ["outlook-web", "outlook-windows-app", "outlook-mac"];
 HAI.DEFAULT_TARGET = "outlook-web";
 })();
