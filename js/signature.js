@@ -65,6 +65,28 @@ function slug(name = "") {
 const nbsp = (value) => esc(value).replace(/ /g, "&#160;");
 const telHref = (value) => "tel:" + String(value).replace(/[^\d+]/g, "");
 
+// U+2060 WORD JOINER: zero-width, and unlike a zero-width space it creates no
+// line-break opportunity, so a number can never wrap mid-digit.
+const WJ = "&#8288;";
+
+/**
+ * A phone number the OS will not turn into a link.
+ *
+ * iOS and Android detect phone numbers in the rendered *text* and wrap them in
+ * their own anchor, which is why neither styling our anchor nor removing it
+ * helped - the client was building a new one either way. Their detectors match
+ * a run of digits and separators, so a zero-width joiner between the groups
+ * leaves nothing long enough to match. Nothing moves by a pixel: the character
+ * has no width.
+ */
+function phoneText(value) {
+  const safe = esc(value);
+  if (safe.includes(" ")) return safe.replace(/ /g, `${WJ}&#160;${WJ}`);
+  // No spaces to hide behind - split the digits down the middle instead.
+  const mid = Math.floor(safe.length / 2);
+  return safe.slice(0, mid) + WJ + safe.slice(mid);
+}
+
 // The file an image becomes inside the Windows package. The extension comes
 // from the data URI itself, so swapping banner.jpg for a PNG stays correct.
 function fileNameFor(key, uri) {
@@ -169,12 +191,12 @@ function buildSignature(employee, opts = {}) {
   const rows = [];
   if (employee.phone) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Phone", w: 12, h: 12,
-                body: nbsp(employee.phone),
+                body: phoneText(employee.phone),
                 href: TAP_TO_CALL ? telHref(employee.phone) : null });
   }
   if (employee.mobile) {
     rows.push({ icon: "phone", uri: ASSETS.phone, alt: "Mobile", w: 12, h: 12,
-                body: nbsp(employee.mobile),
+                body: phoneText(employee.mobile),
                 href: TAP_TO_CALL ? telHref(employee.mobile) : null });
   }
   if (employee.email) {

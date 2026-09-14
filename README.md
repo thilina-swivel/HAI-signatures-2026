@@ -145,13 +145,22 @@ Verified against a stylesheet forcing `color:blue !important` and
 client — and every link still computes to black with no underline in all three
 builds. Don't remove either declaration.
 
-**Phone numbers are the exception: they are not links at all.** The span trick
-holds everywhere else — the address is an `<a>` to Google Maps and it renders
-black on mobile — but the Outlook apps on iOS and Android special-case phone
-numbers and restyle them to their own blue underline whatever the markup says.
-The only thing that reliably wins is not handing them an anchor. `TAP_TO_CALL`
-at the top of `js/signature.js` flips it back if a tappable number is ever worth
-more than the appearance.
+**Phone numbers are the exception, and they took three attempts.** Styling the
+anchor did not work. Removing the anchor did not work either. The cause is not
+CSS at all: iOS and Android detect phone numbers in the rendered *text* and wrap
+them in an anchor of their own, so the client was building a link whatever we
+did. (The giveaway was the address — also an `<a>`, sitting one line below,
+rendering black the whole time.)
+
+The fix is to stop the number looking like a phone number to a detector. A
+U+2060 WORD JOINER between each group leaves no digit run longer than four,
+where detectors need about seven. It is zero-width, so nothing moves — the
+number measures 90.42px with and without it — and unlike a zero-width space it
+creates no line-break opportunity, so the number can never wrap mid-digit. The
+plain-text half of the clipboard is built separately and stays clean.
+
+`TAP_TO_CALL` at the top of `js/signature.js` restores the `tel:` link if a
+tappable number is ever worth more than the appearance.
 
 ## Why the preview is an iframe
 
