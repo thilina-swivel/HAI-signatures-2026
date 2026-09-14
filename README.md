@@ -123,10 +123,10 @@ attributes, every image sized twice. `Signatures HTML/` and `Email Template/`
 keep the two originals for reference.
 
 The geometry is the block of constants at the top of `js/signature.js`, and it
-the template's own: 480px wide, split 142 + 25 + 313, with a full-bleed
-480 × 70 banner. The photo cell carries no padding — it is simply wider than the
-photo, which is how the template left room for the rule that used to sit at its
-edge. Recut the banner and `BANNER_RATIO` is the only line to change.
+the template's own: 480px wide, split 117 + 30 + 333, with a full-bleed
+480 × 70 banner. The template made the photo cell wider than the photo to leave
+room for a coloured rule between the two; with that rule gone the slack was dead
+space, so the cell is now exactly the photo and the gap is one number, `GUTTER`. Recut the banner and `BANNER_RATIO` is the only line to change.
 
 ## Why every link has a span inside it
 
