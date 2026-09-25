@@ -120,6 +120,7 @@ body {
   padding: 9px 15px; font: inherit; font-size: 14px; font-weight: 500;
   color: var(--text); background: var(--surface);
   border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  text-decoration: none;
   transition: background .15s, border-color .15s;
 }
 .btn:hover { background: #f7f8fa; border-color: #c8ccd4; }

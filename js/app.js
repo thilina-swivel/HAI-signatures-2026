@@ -140,15 +140,28 @@ function renderDetail(person) {
 function renderTargetParts(person) {
   const target = TARGETS[targetId];
   paintSignature(person);
-  renderActions(target);
+  renderActions(target, person);
   stepsEl.innerHTML = target.steps.map((step) => `<li>${step}</li>`).join("");
   noteEl.innerHTML = target.note;
-  hintEl.innerHTML = target.delivery === "zip"
-    ? `The preview shows the real layout. In the package the images are separate files inside <code>${FILES_DIR}</code>, which is what keeps them sharp in classic Outlook.`
-    : `Nothing pasted? Use <strong>Download .html</strong>, open the file in your browser, select everything with <kbd>Ctrl</kbd>/<kbd>&#8984;</kbd> + <kbd>A</kbd> and copy from there.`;
+  // The pasted builds have no download to fall back on, so they have no hint.
+  hintEl.hidden = target.delivery !== "zip";
+  hintEl.innerHTML = hintEl.hidden
+    ? ""
+    : `The preview shows the real layout. In the package the images are separate files inside <code>${FILES_DIR}</code>, which is what keeps them sharp in classic Outlook.`;
 }
 
-function renderActions(target) {
+// Full-size originals sit beside the page, one per photo id. Linking to the file
+// rather than embedding it keeps ~180 MB out of js/photos.js.
+const FULL_PHOTO_DIR = "Profile photos full";
+
+function photoButton(person) {
+  if (!person.photo) return `<button class="btn" data-act="photo">Download profile photo</button>`;
+  const href = `${encodeURI(FULL_PHOTO_DIR)}/${encodeURIComponent(person.photo)}.png`;
+  const name = `${person.name.replace(/\s+/g, "_")}_profile_photo.png`;
+  return `<a class="btn" href="${href}" download="${esc(name)}" target="_blank" rel="noopener">Download profile photo</a>`;
+}
+
+function renderActions(target, person) {
   actionsEl.innerHTML = target.delivery === "zip"
     ? `<button class="btn btn-primary" data-act="zip">
          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v9.6l3.3-3.3 1.4 1.4-5.7 5.7-5.7-5.7 1.4-1.4L8 11.6V2h2zM3 16h14v2H3v-2z"/></svg>
@@ -159,7 +172,7 @@ function renderActions(target) {
          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 2h9a2 2 0 012 2v10h-2V4H7V2zM4 6h9a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zm0 2v8h9V8H4z"/></svg>
          Copy signature
        </button>
-       <button class="btn" data-act="html">Download .html</button>`;
+       ${photoButton(person)}`;
 }
 
 /**
@@ -328,8 +341,14 @@ actionsEl.addEventListener("click", async (event) => {
         button.lastChild.textContent = " Copy signature";
       }, 2600);
     } else {
-      toast("Copy was blocked by the browser - use the download instead");
+      toast("Copy was blocked by the browser - try again, or use a different browser");
     }
+    return;
+  }
+
+  if (button.dataset.act === "photo") {
+    // No photo on file: hand over the drawn initials instead.
+    save(new Blob([bytesFromDataUri(photoFor(current))], { type: "image/png" }), `${stem}_profile_photo.png`);
     return;
   }
 
