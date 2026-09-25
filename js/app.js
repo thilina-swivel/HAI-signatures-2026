@@ -143,9 +143,36 @@ function renderTargetParts(person) {
   renderActions(target);
   stepsEl.innerHTML = target.steps.map((step) => `<li>${step}</li>`).join("");
   noteEl.innerHTML = target.note;
-  hintEl.innerHTML = target.delivery === "zip"
-    ? `The preview shows the real layout. In the package the images are separate files inside <code>${FILES_DIR}</code>, which is what keeps them sharp in classic Outlook.`
-    : `Nothing pasted? Use <strong>Download .html</strong>, open the file in your browser, select everything with <kbd>Ctrl</kbd>/<kbd>&#8984;</kbd> + <kbd>A</kbd> and copy from there.`;
+  // The pasted builds have no download to fall back on, so they have no hint.
+  hintEl.hidden = target.delivery !== "zip";
+  hintEl.innerHTML = hintEl.hidden
+    ? ""
+    : `The preview shows the real layout. In the package the images are separate files inside <code>${FILES_DIR}</code>, which is what keeps them sharp in classic Outlook.`;
+}
+
+/**
+ * The full-size original, as a data URI. Each lives in its own generated
+ * js/photos-full/<id>.js, pulled in with a <script> tag on first click: that
+ * works straight off disk, where fetch() is blocked and <a download> only
+ * opens the image. Kept out of js/photos.js, which every visit loads.
+ */
+const fullPhotos = new Map();
+
+HAI.onFullPhoto = (id, uri) => fullPhotos.get(id)?.resolve(uri);
+
+function loadFullPhoto(id) {
+  if (!fullPhotos.has(id)) {
+    let resolve;
+    const promise = new Promise((done, fail) => {
+      resolve = done;
+      const script = document.createElement("script");
+      script.src = `js/photos-full/${encodeURIComponent(id)}.js`;
+      script.onerror = () => { fullPhotos.delete(id); fail(new Error(`no full photo for ${id}`)); };
+      document.head.appendChild(script);
+    });
+    fullPhotos.set(id, { promise, resolve });
+  }
+  return fullPhotos.get(id).promise;
 }
 
 function renderActions(target) {
@@ -159,7 +186,7 @@ function renderActions(target) {
          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 2h9a2 2 0 012 2v10h-2V4H7V2zM4 6h9a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zm0 2v8h9V8H4z"/></svg>
          Copy signature
        </button>
-       <button class="btn" data-act="html">Download .html</button>`;
+       <button class="btn" data-act="photo">Download profile photo</button>`;
 }
 
 /**
@@ -328,8 +355,24 @@ actionsEl.addEventListener("click", async (event) => {
         button.lastChild.textContent = " Copy signature";
       }, 2600);
     } else {
-      toast("Copy was blocked by the browser - use the download instead");
+      toast("Copy was blocked by the browser - try again, or use a different browser");
     }
+    return;
+  }
+
+  if (button.dataset.act === "photo") {
+    // Falls back to the signature-size photo (or the drawn initials) when there
+    // is no full-size original on file.
+    const person = current;
+    let uri = photoFor(person);
+    if (person.photo) {
+      try {
+        uri = await loadFullPhoto(person.photo);
+      } catch (err) {
+        /* keep the signature-size one */
+      }
+    }
+    save(new Blob([bytesFromDataUri(uri)], { type: "image/png" }), `${stem}_profile_photo.png`);
     return;
   }
 
