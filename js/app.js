@@ -140,7 +140,7 @@ function renderDetail(person) {
 function renderTargetParts(person) {
   const target = TARGETS[targetId];
   paintSignature(person);
-  renderActions(target, person);
+  renderActions(target);
   stepsEl.innerHTML = target.steps.map((step) => `<li>${step}</li>`).join("");
   noteEl.innerHTML = target.note;
   // The pasted builds have no download to fall back on, so they have no hint.
@@ -150,18 +150,32 @@ function renderTargetParts(person) {
     : `The preview shows the real layout. In the package the images are separate files inside <code>${FILES_DIR}</code>, which is what keeps them sharp in classic Outlook.`;
 }
 
-// Full-size originals sit beside the page, one per photo id. Linking to the file
-// rather than embedding it keeps ~180 MB out of js/photos.js.
-const FULL_PHOTO_DIR = "Profile photos full";
+/**
+ * The full-size original, as a data URI. Each lives in its own generated
+ * js/photos-full/<id>.js, pulled in with a <script> tag on first click: that
+ * works straight off disk, where fetch() is blocked and <a download> only
+ * opens the image. Kept out of js/photos.js, which every visit loads.
+ */
+const fullPhotos = new Map();
 
-function photoButton(person) {
-  if (!person.photo) return `<button class="btn" data-act="photo">Download profile photo</button>`;
-  const href = `${encodeURI(FULL_PHOTO_DIR)}/${encodeURIComponent(person.photo)}.png`;
-  const name = `${person.name.replace(/\s+/g, "_")}_profile_photo.png`;
-  return `<a class="btn" href="${href}" download="${esc(name)}" target="_blank" rel="noopener">Download profile photo</a>`;
+HAI.onFullPhoto = (id, uri) => fullPhotos.get(id)?.resolve(uri);
+
+function loadFullPhoto(id) {
+  if (!fullPhotos.has(id)) {
+    let resolve;
+    const promise = new Promise((done, fail) => {
+      resolve = done;
+      const script = document.createElement("script");
+      script.src = `js/photos-full/${encodeURIComponent(id)}.js`;
+      script.onerror = () => { fullPhotos.delete(id); fail(new Error(`no full photo for ${id}`)); };
+      document.head.appendChild(script);
+    });
+    fullPhotos.set(id, { promise, resolve });
+  }
+  return fullPhotos.get(id).promise;
 }
 
-function renderActions(target, person) {
+function renderActions(target) {
   actionsEl.innerHTML = target.delivery === "zip"
     ? `<button class="btn btn-primary" data-act="zip">
          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2v9.6l3.3-3.3 1.4 1.4-5.7 5.7-5.7-5.7 1.4-1.4L8 11.6V2h2zM3 16h14v2H3v-2z"/></svg>
@@ -172,7 +186,7 @@ function renderActions(target, person) {
          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7 2h9a2 2 0 012 2v10h-2V4H7V2zM4 6h9a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2zm0 2v8h9V8H4z"/></svg>
          Copy signature
        </button>
-       ${photoButton(person)}`;
+       <button class="btn" data-act="photo">Download profile photo</button>`;
 }
 
 /**
@@ -347,8 +361,18 @@ actionsEl.addEventListener("click", async (event) => {
   }
 
   if (button.dataset.act === "photo") {
-    // No photo on file: hand over the drawn initials instead.
-    save(new Blob([bytesFromDataUri(photoFor(current))], { type: "image/png" }), `${stem}_profile_photo.png`);
+    // Falls back to the signature-size photo (or the drawn initials) when there
+    // is no full-size original on file.
+    const person = current;
+    let uri = photoFor(person);
+    if (person.photo) {
+      try {
+        uri = await loadFullPhoto(person.photo);
+      } catch (err) {
+        /* keep the signature-size one */
+      }
+    }
+    save(new Blob([bytesFromDataUri(uri)], { type: "image/png" }), `${stem}_profile_photo.png`);
     return;
   }
 
