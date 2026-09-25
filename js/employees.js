@@ -33,6 +33,7 @@ const EMPLOYEES = [
   { name: "Uditha Wijesundara", title: "Chief Operating Officer", phone: "+94 77 507 1016", photo: "uditha-wijesundara", team: "Group" },
   { name: "Usha Rajapaksha", title: "General Manager – Operations & Client Experience", phone: "+94 77 952 0755", photo: "usha-rajapaksha", team: "Group" },
   // --- humaniseAI ------------------------------------------------------------
+  { name: "Chamal De Mel", title: "Senior Software Engineer", phone: "+94 77 691 7353", photo: "chamal-de-mel", team: "humaniseAI" },
   { name: "Charith Nuwan Bimsara", title: "Associate Technical Lead – AI Full Stack", phone: "+94 77 196 6684", photo: "charith-nuwan-bimsara", team: "humaniseAI" },
   { name: "Thilina Siriwardana", title: "Senior Architect cum Senior Engineering Manager", phone: "+94 71 828 9690", photo: "thilina-siriwardana", team: "humaniseAI" },
   { name: "Navindu Madanayaka", title: "Senior Software Engineer", phone: "+94 71 417 0928", photo: "navindu-madanayaka", team: "humaniseAI" },
@@ -44,7 +45,6 @@ const EMPLOYEES = [
   // --- Tech ------------------------------------------------------------------
   { name: "Ananthan Gananamoorthy", title: "Senior Software Engineer", phone: "+94 75 993 9211", photo: "ananthan-gananamoorthy", team: "Tech" },
   { name: "Ayesh Lakshan", title: "Senior Software Engineer", phone: "+94 77 144 8903", photo: "ayesh-lakshan", team: "Tech" },
-  { name: "Chamal De Mel", title: "Senior Software Engineer", phone: "+94 77 691 7353", photo: "chamal-de-mel", team: "Tech" },
   { name: "Chamath Ranaweera", title: "Senior Software Engineer", phone: "+94 70 265 4310", photo: "chamath-ranaweera", team: "Tech" },
   { name: "Chamikara Jayasekara", title: "Senior Software Engineer", phone: "+94 75 216 1796", photo: "chamikara-jayasekara", team: "Tech" },
   { name: "Chamikara Nayanajith", title: "Associate Technical Lead", phone: "+94 71 512 2893", photo: "chamikara-nayanajith", team: "Tech" },
