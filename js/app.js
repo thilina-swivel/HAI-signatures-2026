@@ -115,11 +115,11 @@ function renderList(query = "") {
 
   const sections = teams.map((team) => {
     const members = matches.filter((p) => p.team === team);
-    return `<h2 class="team-label">${esc(team)}</h2><div class="grid">${members.map(cardHtml).join("")}</div>`;
+    return `<h2 class="team-label">${esc(team)} – ${members.length}</h2><div class="grid">${members.map(cardHtml).join("")}</div>`;
   });
   const rest = matches.filter((p) => !p.team);
   if (rest.length) {
-    sections.push(`<h2 class="team-label">Everyone else</h2><div class="grid">${rest.map(cardHtml).join("")}</div>`);
+    sections.push(`<h2 class="team-label">Everyone else – ${rest.length}</h2><div class="grid">${rest.map(cardHtml).join("")}</div>`);
   }
   peopleEl.innerHTML = sections.join("");
 }
